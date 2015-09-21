@@ -43,7 +43,13 @@ ItemList.prototype.add = function (data, ignoreComma) {
     this.content += data;
 }
 
-module.exports = function(html, cb) {
+module.exports = function(html, options, cb) {
+    if (typeof options === "function" && typeof cb === "undefined") {
+        cb = options;
+        options = null;
+    }
+    options = options || {};
+    options.controlAttributes = options.controlAttributes || {};
     var currentItemList = new ItemList(null);
 
     var parser = new Parser({
@@ -155,9 +161,45 @@ module.exports = function(html, cb) {
                     }
                 });
             }
-            var objectStr = !isEmpty(objects) ? JSON.stringify(objects) : ""
 
-            var item = 'h(' + JSON.stringify(element[0] + idSuffix + classSuffix) + (
+            var itemPrefix = "";
+            var itemSuffix = "";
+
+            var objectStr = "";
+            if (!isEmpty(objects)) {
+
+//console.log("objects", objects);
+
+                if (objects.attributes) {
+                    var conditionalControlObject = {};
+                    if (typeof objects.attributes[options.controlAttributes.prefix + "section"] !== "undefined") {
+                        conditionalControlObject.section = objects.attributes[options.controlAttributes.prefix + "section"];
+                        if (options.controlAttributes.remove) {
+                            delete objects.attributes[options.controlAttributes.prefix + "section"];
+                        }
+                    }
+                    if (typeof objects.attributes[options.controlAttributes.prefix + "view"] !== "undefined") {
+                        conditionalControlObject.view = objects.attributes[options.controlAttributes.prefix + "view"];
+                        if (options.controlAttributes.remove) {
+                            delete objects.attributes[options.controlAttributes.prefix + "view"];
+                        }
+                    }
+                    if (typeof objects.attributes[options.controlAttributes.prefix + "prop"] !== "undefined") {
+                        conditionalControlObject.property = objects.attributes[options.controlAttributes.prefix + "prop"];
+                        if (options.controlAttributes.remove) {
+                            delete objects.attributes[options.controlAttributes.prefix + "prop"];
+                        }
+                    }
+                    if (conditionalControlObject) {
+                        itemPrefix = 'ch(' + JSON.stringify(conditionalControlObject) + ', function () { return ';
+                        itemSuffix = '; })';
+                    }
+                }
+
+                objectStr = JSON.stringify(objects);
+            }
+
+            var item = itemPrefix + 'h(' + JSON.stringify(element[0] + idSuffix + classSuffix) + (
                     (objectStr !== "") ? ", " + objectStr : ""
                 )
                     //     attrPairs.length || datasetPairs.length
@@ -185,7 +227,7 @@ module.exports = function(html, cb) {
                     elementContent.length
                         ? ', [' + (elementContent[0] === "\n" ? '' : ' ') + elementContent + (elementContent.match(/\s$/) ? '' : ' ') + ']'
                         : ''
-                ) + ')';
+                ) + ')' + itemSuffix;
 
             currentItemList.add(item);
         },
