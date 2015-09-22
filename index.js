@@ -52,6 +52,9 @@ module.exports = function(html, options, cb) {
     options.controlAttributes = options.controlAttributes || {};
     var currentItemList = new ItemList(null);
 
+    var inlineScripts = [];
+    var components = {};
+
     var parser = new Parser({
         onopentag: function (name, attribs) {
             currentItemList = new ItemList(currentItemList);
@@ -166,76 +169,177 @@ module.exports = function(html, options, cb) {
             var itemSuffix = "";
 
             var objectStr = "";
+            var conditionalControlObject = {};
             if (!isEmpty(objects)) {
 
-//console.log("objects", objects);
+                function getAttribute (name) {
+                    name = options.controlAttributes.prefix + name;
+                    var propName = null;
+                    var value = null;
+                    if (
+                        /^data-/.test(options.controlAttributes.prefix) &&
+                        objects.dataset &&
+                        typeof (
+                            value = objects.dataset[
+                                (propName = camel(name.replace(/^data-/, "")))
+                            ]
+                        ) !== "undefined"
+                    ) {
+                        if (options.controlAttributes.remove) {
+                            delete objects.dataset[propName];
+                        }
+                        return value;
+                    } else
+                    if (objects.attributes) {
+                        if (typeof objects.attributes[name] === "undefined") {
+                            return null;
+                        }
+                        var value = objects.attributes[name];
+                        if (options.controlAttributes.remove) {
+                            delete objects.attributes[name];
+                        }
+                        return value;
+                    }
+                    return null;
+                }
+                var attribute = getAttribute("id");
+                if (attribute !== null) {
+                    conditionalControlObject.id = attribute;
+                }
+                attribute = getAttribute("section");
+                if (attribute !== null) {
+                    conditionalControlObject.section = attribute;
+                }
+                attribute = getAttribute("view");
+                if (attribute !== null) {
+                    conditionalControlObject.view = attribute;
+                }
+                attribute = getAttribute("location");
+                if (attribute !== null) {
+                    conditionalControlObject.location = attribute;
+                }
+                attribute = getAttribute("impl");
+                if (attribute !== null) {
+                    conditionalControlObject.impl = attribute;
+                }
+                attribute = getAttribute("prop");
+                if (attribute !== null) {
+                    conditionalControlObject.property = attribute;
+                }
 
-                if (objects.attributes) {
-                    var conditionalControlObject = {};
-                    if (typeof objects.attributes[options.controlAttributes.prefix + "section"] !== "undefined") {
-                        conditionalControlObject.section = objects.attributes[options.controlAttributes.prefix + "section"];
-                        if (options.controlAttributes.remove) {
-                            delete objects.attributes[options.controlAttributes.prefix + "section"];
-                        }
+                if (element[0] === "script") {
+                    var script = {};
+                    if (typeof conditionalControlObject.id !== "undefined") {
+                        script.id = conditionalControlObject.id;
                     }
-                    if (typeof objects.attributes[options.controlAttributes.prefix + "view"] !== "undefined") {
-                        conditionalControlObject.view = objects.attributes[options.controlAttributes.prefix + "view"];
-                        if (options.controlAttributes.remove) {
-                            delete objects.attributes[options.controlAttributes.prefix + "view"];
-                        }
+                    if (typeof conditionalControlObject.location !== "undefined") {
+                        script.location = conditionalControlObject.location;
                     }
-                    if (typeof objects.attributes[options.controlAttributes.prefix + "prop"] !== "undefined") {
-                        conditionalControlObject.property = objects.attributes[options.controlAttributes.prefix + "prop"];
-                        if (options.controlAttributes.remove) {
-                            delete objects.attributes[options.controlAttributes.prefix + "prop"];
-                        }
+                    if (
+                        options.controlAttributes.scriptLocations &&
+                        options.controlAttributes.scriptLocations[script.location] !== true
+                    ) {
+                        return;
                     }
-                    if (conditionalControlObject) {
-                        itemPrefix = 'ch(' + JSON.stringify(conditionalControlObject) + ', function () { return ';
-                        itemSuffix = '; })';
-                    }
+                    script.code = JSON.parse('[' + elementContent + ']').join("");
+                    inlineScripts.push(script);
+                    return;
                 }
 
                 objectStr = JSON.stringify(objects);
             }
 
-            var item = itemPrefix + 'h(' + JSON.stringify(element[0] + idSuffix + classSuffix) + (
-                    (objectStr !== "") ? ", " + objectStr : ""
-                )
-                    //     attrPairs.length || datasetPairs.length
-                    //         ? ", { \"attributes\": { "
-                    //         : ''
-                    // ) + (
-                    //     attrPairs.length
-                    //         ? attrPairs.join(",\n" + indent + '    ')
-                    //         : ''
-                    // ) + (
-                    //     datasetPairs.length && attrPairs.length
-                    //         ? ",\n" + indent + '    '
-                    //         : ''
-                    // ) + (
-                    //     datasetPairs.length
-                    //         ? "\"dataset\": { " + datasetPairs.join(",\n" + indent + '    ') + "}"
-                    //         : ''
-                    // ) + (
-                    //     attrPairs.length || datasetPairs.length
-                    //         ? "}}"
-                    //         : ''
-                    // )
+            var item = null;
 
-                + (
-                    elementContent.length
-                        ? ', [' + (elementContent[0] === "\n" ? '' : ' ') + elementContent + (elementContent.match(/\s$/) ? '' : ' ') + ']'
-                        : ''
-                ) + ')' + itemSuffix;
 
-            currentItemList.add(item);
+            if (Object.keys(conditionalControlObject).length > 0) {
+                if (
+//                    typeof conditionalControlObject.section !== "undefined" &&
+                    typeof conditionalControlObject.view !== "undefined"
+                ) {
+                    item = 'ch(' + JSON.stringify(conditionalControlObject) + ', function () { return ' + 
+                        'h(' + JSON.stringify(element[0] + idSuffix + classSuffix) + (
+                            (objectStr !== "") ? ", " + objectStr : ""
+                        ) + 
+                        (
+                            elementContent.length ? 
+                            ', [' + (elementContent[0] === "\n" ? '' : ' ') + elementContent + (elementContent.match(/\s$/) ? '' : ' ') + ']'
+                                : ''
+                        ) +
+                        ')' +
+                        '; })';
+                } else {
+                    item = 'h(' + JSON.stringify(element[0] + idSuffix + classSuffix) + (
+                            (objectStr !== "") ? ", " + objectStr : ""
+                        ) + 
+                        ', ch(' + JSON.stringify(conditionalControlObject) + ', function () { return ' + 
+                        (
+                            elementContent.length ? 
+                            '[' + (elementContent[0] === "\n" ? '' : ' ') + elementContent + (elementContent.match(/\s$/) ? '' : ' ') + ']'
+                                : ''
+                        ) +
+                        '; })' +
+                        ')';
+                }
+
+            } else {
+                item = 'h(' + JSON.stringify(element[0] + idSuffix + classSuffix) + (
+                        (objectStr !== "") ? ", " + objectStr : ""
+                    )
+                        //     attrPairs.length || datasetPairs.length
+                        //         ? ", { \"attributes\": { "
+                        //         : ''
+                        // ) + (
+                        //     attrPairs.length
+                        //         ? attrPairs.join(",\n" + indent + '    ')
+                        //         : ''
+                        // ) + (
+                        //     datasetPairs.length && attrPairs.length
+                        //         ? ",\n" + indent + '    '
+                        //         : ''
+                        // ) + (
+                        //     datasetPairs.length
+                        //         ? "\"dataset\": { " + datasetPairs.join(",\n" + indent + '    ') + "}"
+                        //         : ''
+                        // ) + (
+                        //     attrPairs.length || datasetPairs.length
+                        //         ? "}}"
+                        //         : ''
+                        // )
+    
+                    + (
+                        elementContent.length
+                            ? ', [' + (elementContent[0] === "\n" ? '' : ' ') + elementContent + (elementContent.match(/\s$/) ? '' : ' ') + ']'
+                            : ''
+                    ) + ')';
+            }
+
+            if (typeof conditionalControlObject.id !== "undefined") {
+                if (components[conditionalControlObject.id]) {
+                    return cb(new Error("Component with id '" + conditionalControlObject.id + "' is declared multiple times! Each component must have a unique id."));
+                }
+                components[conditionalControlObject.id] = {
+                    chscript: item
+                };
+                var anchorItem = 'ch(' + JSON.stringify({
+                    anchor: conditionalControlObject.id
+                }) + ', function () { return h("div", ' + JSON.stringify({
+                    dataset: {
+                        componentId: conditionalControlObject.id,
+                        componentImpl: conditionalControlObject.impl || null,
+                        componentAnchorId: conditionalControlObject.id
+                    }
+                }) + ');})';
+                currentItemList.add(anchorItem);
+            } else {
+                currentItemList.add(item);
+            }
         },
         oncomment: function (text) {
             currentItemList.add('/*' + text + '*/', false); // @todo comment-safety
         },
         onend: function () {
-            cb(null, currentItemList.content);
+            cb(null, currentItemList.content, components, inlineScripts);
         }
     }, {decodeEntities: true});
 
