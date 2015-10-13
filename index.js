@@ -319,6 +319,7 @@ module.exports = function(html, options, cb) {
                     return cb(new Error("Component with id '" + conditionalControlObject.id + "' is declared multiple times! Each component must have a unique id."));
                 }
                 components[conditionalControlObject.id] = {
+                    impl: conditionalControlObject.impl || null,
                     chscript: item
                 };
                 var anchorItem = 'ch(' + JSON.stringify({
