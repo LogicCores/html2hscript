@@ -1,7 +1,7 @@
 {
-  "name": "html2hscript",
-  "version": "1.2.0",
-  "description": "parse html into hyperscript",
+  "name": "html2chscript",
+  "version": "0.1.0",
+  "description": "parse html into conditional hyperscript",
   "main": "index.js",
   "directories": {
     "test": "test"
@@ -22,14 +22,5 @@
     "parser",
     "hyperscript"
   ],
-  "author": "https://www.npmjs.com/~unframework",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/twilson63/html2hscript.git"
-  },
-  "bugs": {
-    "url": "https://github.com/twilson63/html2hscript/issues"
-  },
-  "homepage": "https://github.com/twilson63/html2hscript"
+  "license": "MIT"
 }
