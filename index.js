@@ -110,8 +110,8 @@ module.exports = function(html, options, cb) {
                 attribs["style"] = {};
                 rules.forEach(function(rule){
                     var split = rule.split(":");
-                    if(split.length == 2){
-                        attribs["style"][split[0].trim()] = split[1].trim();
+                    if(split.length >= 2){
+                        attribs["style"][split.shift().trim()] = split.join(":").trim();
                     }
                 });
             }
