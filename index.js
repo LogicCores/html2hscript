@@ -58,7 +58,9 @@ module.exports = function(html, options, cb) {
     var parser = new Parser({
         onopentag: function (name, attribs) {
             currentItemList = new ItemList(currentItemList);
-            elementStack.unshift([ name, attribs ]);
+            elementStack.unshift([ name, attribs, {
+                sectionViews: {}
+            } ]);
         },
         ontext: function (text) {
             currentItemList.add(JSON.stringify(text));
@@ -250,6 +252,26 @@ module.exports = function(html, options, cb) {
             }
 
             var item = null;
+
+
+
+            // See if we have a parent tag that just has a section attribute (no view).
+            if (
+                elementStack[0] &&
+                (elementStack[0][1]["component:section"] || elementStack[0][1]["data-component-section"]) &&
+                (!elementStack[0][1]["component:view"] && !elementStack[0][1]["data-component-view"])
+            ) {
+                if (
+                    // See if we have a child tag that does not specify a section attribute so we ignore it.
+                    !conditionalControlObject.section ||
+                    // See if we have a child tag that specifies a view that is already declared.
+                    elementStack[0][2].sectionViews[conditionalControlObject.view]
+                ) {
+                    return;
+                }
+                elementStack[0][2].sectionViews[conditionalControlObject.view] = true;
+            }
+
 
 
             if (Object.keys(conditionalControlObject).length > 0) {
