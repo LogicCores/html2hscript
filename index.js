@@ -229,6 +229,30 @@ module.exports = function(html, options, cb) {
                     conditionalControlObject.property = attribute;
                 }
 
+                attribute = getAttribute("prop-target");
+                if (attribute !== null && conditionalControlObject.property) {
+                    conditionalControlObject.propertyTarget = attribute;
+                    var targetParts = attribute.split("/");
+				    if (!objects.attributes) {
+				        objects.attributes = {};
+				    }
+    				if (targetParts.length === 1) {
+    				    objects.attributes[targetParts[0]] = "{{" + conditionalControlObject.property + "}}";
+    				} else
+    				if (targetParts.length === 2 && targetParts[0] === "style") {
+    				    if (!objects.style) {
+    				        objects.style = {};
+    				    }
+    					if (targetParts[1] === "background-image") {
+    						objects.style[targetParts[1]] = "url('{{" + conditionalControlObject.property + "}}')";
+    					} else {
+    						objects.style[targetParts[1]] = "{{'" + conditionalControlObject.property + "}}";
+    					}
+    				} else {
+    					throw new Error("Unsupported target '" + attribute + "'");
+    				}
+                }
+
                 if (element[0] === "script") {
                     var script = {};
                     if (typeof conditionalControlObject.id !== "undefined") {
