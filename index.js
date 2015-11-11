@@ -174,7 +174,7 @@ module.exports = function(html, options, cb) {
             var conditionalControlObject = {};
             if (!isEmpty(objects)) {
 
-                function getAttribute (name) {
+                function getAttribute (name, keep) {
                     name = options.controlAttributes.prefix + name;
                     var propName = null;
                     var value = null;
@@ -187,7 +187,7 @@ module.exports = function(html, options, cb) {
                             ]
                         ) !== "undefined"
                     ) {
-                        if (options.controlAttributes.remove) {
+                        if (options.controlAttributes.remove && !keep) {
                             delete objects.dataset[propName];
                         }
                         return value;
@@ -197,7 +197,7 @@ module.exports = function(html, options, cb) {
                             return null;
                         }
                         var value = objects.attributes[name];
-                        if (options.controlAttributes.remove) {
+                        if (options.controlAttributes.remove && !keep) {
                             delete objects.attributes[name];
                         }
                         return value;
@@ -224,7 +224,7 @@ module.exports = function(html, options, cb) {
                 if (attribute !== null) {
                     conditionalControlObject.impl = attribute;
                 }
-                attribute = getAttribute("prop");
+                attribute = getAttribute("prop", true);
                 if (attribute !== null) {
                     conditionalControlObject.property = attribute;
                 }
